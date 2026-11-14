@@ -81,7 +81,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ALAM-Family-Control-Pro-v0.3
+          name: ALAM-Family-Control-Pro-v0.5
           path: '**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
           retention-days: 30
