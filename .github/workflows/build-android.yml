@@ -6,16 +6,16 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Java 17
@@ -29,24 +29,42 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
 
-      - name: Setup Gradle
+      - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Extract Android Project
+      - name: Extract Android project
         shell: bash
         run: |
           if [ -f ALAM-Project.zip ]; then
             mkdir -p extracted
             unzip -q ALAM-Project.zip -d extracted
             echo "PROJECT_DIR=extracted" >> "$GITHUB_ENV"
-          elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
+          elif [ -f build.gradle.kts ]; then
             echo "PROJECT_DIR=." >> "$GITHUB_ENV"
           else
             echo "Android project not found"
             exit 1
           fi
+
+      - name: Add Firebase configuration
+        shell: bash
+        env:
+          FIREBASE_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$FIREBASE_JSON" ]; then
+            echo "Missing GOOGLE_SERVICES_JSON secret"
+            exit 1
+          fi
+
+          mkdir -p "$PROJECT_DIR/app"
+          printf '%s' "$FIREBASE_JSON" \
+            > "$PROJECT_DIR/app/google-services.json"
+
+          python3 -m json.tool \
+            "$PROJECT_DIR/app/google-services.json" \
+            > /dev/null
 
       - name: Build Debug APK
         shell: bash
@@ -63,7 +81,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ALAM-Family-Control-Pro-APK
+          name: ALAM-Family-Control-Pro-v0.3
           path: '**/build/outputs/apk/debug/*.apk'
           if-no-files-found: error
           retention-days: 30
